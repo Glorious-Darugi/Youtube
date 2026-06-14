@@ -84,8 +84,41 @@ apps-script/            (이전) 구글 시트 + 수익 자동 버전 보관
 - **403 quotaExceeded**: 하루 무료 할당량(기본 10,000) 초과. 다음 날 초기화되며, 채널/영상 수를 줄이면 절약됩니다.
 - **엉뚱한 채널이 잡힘**: 이름 검색이라 그럴 수 있어요. `channels.ts` 에서 `handle` 또는 `channelId` 로 바꾸세요.
 
-## 7. V2 아이디어
+## 7. 수익(자동) + 프리랜서 비용(수동) 설정
 
-- 수익(₩) 자동 집계 (Google OAuth + YouTube Analytics API)
-- 조회수 추이 그래프(일자별 스냅샷 저장)
-- 채널 비교 뷰, CSV 내보내기
+> 이 기능은 **로그인한 본인에게만** 보입니다. 안 켜도 공개 지표 대시보드는 그대로 동작합니다.
+
+작동 방식: 구글 로그인으로 수익(YouTube Analytics)을 자동 수집 → 원화 환산. 비용은 영상별로 직접 입력하면 저장되고 순이익이 자동 계산됩니다. 채널이 여러 계정에 있으면 **각 계정으로 한 번씩 로그인**하면 둘 다 연결됩니다.
+
+### ① Vercel Postgres 만들기
+Vercel 프로젝트 → **Storage → Create Database → Postgres** → 생성 후 이 프로젝트에 **Connect**.
+→ `POSTGRES_URL` 등 환경변수가 자동으로 추가됩니다. (테이블은 앱이 처음 실행될 때 자동 생성)
+
+### ② 구글 OAuth 클라이언트 만들기
+[Cloud Console](https://console.cloud.google.com) → **API 및 서비스**에서:
+1. **YouTube Analytics API** 를 라이브러리에서 추가로 **사용 설정** (Data API는 이미 켰음)
+2. **OAuth 동의 화면**: User Type = External, 앱 이름 입력, **테스트 사용자**에 내 이메일(들) 추가
+   - 범위(scope): `youtube.readonly`, `yt-analytics.readonly`, `yt-analytics-monetary.readonly`
+   - (테스트 모드면 구글 심사 없이 테스트 사용자만 사용 가능 — 개인용은 이걸로 충분)
+3. **사용자 인증 정보 → OAuth 클라이언트 ID → 웹 애플리케이션**
+   - 승인된 리디렉션 URI: `https://<배포주소>/api/auth/callback/google`
+     (로컬도 쓰면 `http://localhost:3000/api/auth/callback/google` 추가)
+   - 만들어진 **클라이언트 ID / 비밀번호** 복사
+
+### ③ Vercel 환경변수 추가 (Settings → Environment Variables)
+| 이름 | 값 |
+|---|---|
+| `AUTH_SECRET` | 아무 긴 랜덤 문자열 (`openssl rand -base64 32`) |
+| `AUTH_GOOGLE_ID` | ②의 클라이언트 ID |
+| `AUTH_GOOGLE_SECRET` | ②의 클라이언트 비밀번호 |
+| `ALLOWED_EMAILS` | 접근 허용 이메일(쉼표로 여러 개). 채널 소유 계정들 |
+| (자동) `POSTGRES_URL` 등 | ①에서 자동 주입됨 |
+
+추가 후 **Redeploy**. → 사이트 우측 상단 **로그인** → 구글 로그인(두 계정 다 한 번씩) → 채널 상세에서 수익·비용·순이익 표시.
+
+> 💡 수익 숫자가 이상하면(환율 등) `USDKRW_FALLBACK` 로 조정하거나 알려주세요. estimatedRevenue는 보통 USD라 원화로 환산합니다.
+
+## 8. V3 아이디어
+
+- 홈에서 채널별 순이익 한눈에 비교
+- 조회수 추이 그래프(일자별 스냅샷 저장), CSV 내보내기

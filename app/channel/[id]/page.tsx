@@ -5,7 +5,7 @@ import { getChannelData } from "@/lib/youtube";
 import { StatCard } from "@/components/StatCard";
 import { TypeBadge } from "@/components/TypeBadge";
 import { BarList } from "@/components/BarList";
-import { VideoTable } from "@/components/VideoTable";
+import { VideoRevenueTable } from "@/components/VideoRevenueTable";
 import { formatCompact } from "@/lib/format";
 
 export const revalidate = 3600;
@@ -86,7 +86,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ id: st
           최근 영상 ({data.recentVideos.length})
         </h2>
         {data.recentVideos.length > 0 ? (
-          <VideoTable videos={data.recentVideos} />
+          <VideoRevenueTable channelId={data.channelId} videos={data.recentVideos} />
         ) : (
           <div className="rounded-2xl border border-slate-100 bg-white p-8 text-center text-sm text-slate-400">
             표시할 영상이 없습니다.
