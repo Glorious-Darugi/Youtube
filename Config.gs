@@ -28,10 +28,16 @@ const CONFIG = {
   //  handle      : '@핸들'  (handle 또는 channelId 중 하나만 있으면 됨)
   //  channelId   : 'UC...'  (handle을 못 찾을 때 더 정확함)
   //  pullRevenue : true 면 수익(USD) 자동 수집 시도 (본인 소유 + 수익창출 채널만)
+  //
+  //  ⚠️ 아래는 채널 "이름"만으로 세팅했습니다. handle 칸에 이름을 넣으면
+  //     먼저 @핸들로 찾아보고, 없으면 이름으로 검색해서 찾습니다.
+  //     더 정확히 하려면 handle 을 실제 '@핸들' 로 바꾸거나 channelId: 'UC...' 를 쓰세요.
+  //  ⚠️ type(쇼츠/롱폼)은 추측값입니다. 틀리면 여기서 바꾸거나 시트 드롭다운에서 수정하세요.
   CHANNELS: [
-    { name: '내 쇼츠 채널',   type: '쇼츠', handle: '@example_shorts',  pullRevenue: true  },
-    { name: '내 롱폼 채널',   type: '롱폼', handle: '@example_long',    pullRevenue: true  },
-    { name: '벤치마크 채널',  type: '롱폼', channelId: 'UC_x5XG1OV2P6uZZ5FSM9Ttw', pullRevenue: false },
+    { name: '쇼츠석사_Fun', type: '쇼츠', handle: '쇼츠석사_Fun', pullRevenue: true },
+    { name: '사연다루기',   type: '롱폼', handle: '사연다루기',   pullRevenue: true },
+    { name: '서담채',       type: '롱폼', handle: '서담채',       pullRevenue: true },
+    { name: '쇼핑석사',     type: '롱폼', handle: '쇼핑석사',     pullRevenue: true },
   ],
 
   // ---------------------------------------------------------------------------
