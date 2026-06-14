@@ -1,0 +1,10 @@
+# clasp push 시 업로드에서 제외할 파일
+**/**
+!appsscript.json
+!*.gs
+
+# 문서/설정 등은 Apps Script로 올리지 않음
+README.md
+.clasp.json
+.claspignore
+.git/**
