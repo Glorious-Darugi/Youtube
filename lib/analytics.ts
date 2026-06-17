@@ -44,6 +44,37 @@ export interface ChannelRevenueResult {
 }
 
 /**
+ * 구글 API 에러 응답에서 사람이 읽을 수 있는 이유를 뽑아낸다.
+ * 메시지가 막연한 "Forbidden" 등이어도 reason/status 코드를 함께 붙여
+ * 원인(accessNotConfigured / ACCESS_TOKEN_SCOPE_INSUFFICIENT / forbidden 등)을 구분할 수 있게 한다.
+ */
+async function describeError(res: Response): Promise<string> {
+  let detail = "";
+  try {
+    const j = await res.json();
+    const err = j?.error;
+    const msg: string = err?.message || "";
+    const reason: string = err?.errors?.[0]?.reason || err?.status || "";
+    // reason 코드가 메시지에 이미 들어있지 않으면 [코드] 형태로 덧붙인다.
+    detail = reason && !msg.includes(reason) ? `${msg} [${reason}]`.trim() : msg;
+  } catch {
+    /* 본문이 JSON이 아니면 상태 코드만 사용 */
+  }
+  return `${res.status}${detail ? " " + detail : ""}`;
+}
+
+export interface ChannelRevenueResult {
+  /** 영상ID → 예상 수익(USD) */
+  byVideo: Record<string, number>;
+  /** 연결된(로그인된) 구글 계정 수 */
+  accounts: number;
+  /** 이 채널을 소유/관리하는 계정(=200 응답)을 찾았는지 */
+  matchedOwner: boolean;
+  /** 마지막으로 만난 API 에러(있으면). 진단 안내용. */
+  apiError?: string;
+}
+
+/**
  * 채널의 영상별 예상 수익(USD)을 가져온다.
  * 저장된 계정 토큰들을 차례로 시도해서, 그 채널을 소유한 계정의 토큰으로 성공시킨다.
  * (계정이 여러 개여도 자동으로 맞는 계정이 처리됨)
