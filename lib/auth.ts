@@ -26,6 +26,8 @@ export function isAllowed(email?: string | null): boolean {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
+  // 설정 오류 등을 막연한 NextAuth 기본 페이지 대신 진단 페이지로 보낸다.
+  pages: { error: "/auth/error" },
   providers: [
     Google({
       authorization: {
