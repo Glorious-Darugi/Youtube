@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { REJECTED_EMAIL_COOKIE } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,10 @@ export default async function AuthErrorPage({
 }: {
   searchParams: Promise<{ error?: string; email?: string }>;
 }) {
-  const { error, email: attempted } = await searchParams;
+  const { error, email: queryEmail } = await searchParams;
+  // 거부 시 lib/auth.ts 가 쿠키에 이메일을 심어줌. 쿼리 파라미터가 비어 있으면 쿠키에서 읽는다.
+  const cookieEmail = (await cookies()).get(REJECTED_EMAIL_COOKIE)?.value;
+  const attempted = queryEmail || cookieEmail || "";
   const code = error || "Default";
   const message =
     ERROR_TEXT[code] || "로그인 중 알 수 없는 오류가 발생했습니다.";
