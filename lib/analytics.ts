@@ -20,12 +20,20 @@ async function accessTokenFrom(refresh: string): Promise<string | null> {
   return data.access_token || null;
 }
 
-/** 구글 API 에러 응답에서 사람이 읽을 수 있는 이유를 뽑아낸다. */
+/**
+ * 구글 API 에러 응답에서 사람이 읽을 수 있는 이유를 뽑아낸다.
+ * 메시지가 막연한 "Forbidden" 등이어도 reason/status 코드를 함께 붙여
+ * 원인(accessNotConfigured / ACCESS_TOKEN_SCOPE_INSUFFICIENT / forbidden 등)을 구분할 수 있게 한다.
+ */
 async function describeError(res: Response): Promise<string> {
   let detail = "";
   try {
     const j = await res.json();
-    detail = j?.error?.message || j?.error?.errors?.[0]?.reason || "";
+    const err = j?.error;
+    const msg: string = err?.message || "";
+    const reason: string = err?.errors?.[0]?.reason || err?.status || "";
+    // reason 코드가 메시지에 이미 들어있지 않으면 [코드] 형태로 덧붙인다.
+    detail = reason && !msg.includes(reason) ? `${msg} [${reason}]`.trim() : msg;
   } catch {
     /* 본문이 JSON이 아니면 상태 코드만 사용 */
   }
