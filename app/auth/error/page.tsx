@@ -15,15 +15,38 @@ const ERROR_TEXT: Record<string, string> = {
   Verification: "로그인 링크가 만료되었거나 이미 사용되었습니다. 다시 시도하세요.",
 };
 
+/** 이메일 일부만 보이게 가린다: storyXXX@gmail.com → st***@gmail.com */
+function maskEmail(e: string): string {
+  const [local, domain] = e.split("@");
+  if (!local || !domain) return e;
+  const head = local.slice(0, Math.min(2, local.length));
+  return `${head}${"*".repeat(Math.max(1, local.length - head.length))}@${domain}`;
+}
+
 export default async function AuthErrorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; email?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, email: attempted } = await searchParams;
   const code = error || "Default";
   const message =
     ERROR_TEXT[code] || "로그인 중 알 수 없는 오류가 발생했습니다.";
+
+  // 현재 ALLOWED_EMAILS 에 들어 있는 이메일들 (마스킹 후 표시).
+  // 사용자가 자기 대시보드라 본인이 넣은 이메일을 알아볼 수 있어야 하고,
+  // 동시에 페이지가 공개라 전체 노출은 피하기 위해 부분 마스킹.
+  const allowedList = (process.env.ALLOWED_EMAILS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const allowedMasked = allowedList.map(maskEmail);
+
+  const attemptedNormalized = (attempted || "").trim().toLowerCase();
+  const isMismatch =
+    code === "AccessDenied" &&
+    attemptedNormalized &&
+    !allowedList.map((s) => s.toLowerCase()).includes(attemptedNormalized);
 
   // 수익/로그인 기능에 필요한 환경변수 점검 (값은 보여주지 않고 설정 여부만)
   const checks: { name: string; required: boolean; ok: boolean; hint: string }[] = [
@@ -52,6 +75,45 @@ export default async function AuthErrorPage({
         <p className="mt-1 text-xs font-mono text-red-400">code: {code}</p>
         <p className="mt-3 text-sm text-slate-700">{message}</p>
       </div>
+
+      {/* AccessDenied 상세: 시도 이메일과 현재 허용 목록을 마스킹해 보여줌 */}
+      {code === "AccessDenied" && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-6 text-sm">
+          <h2 className="text-sm font-semibold text-amber-900">허용 목록 점검</h2>
+          {attempted ? (
+            <p className="mt-2 text-slate-700">
+              방금 로그인 시도한 이메일:{" "}
+              <span className="rounded bg-white px-1.5 py-0.5 font-mono text-slate-900">{attempted}</span>
+            </p>
+          ) : (
+            <p className="mt-2 text-slate-700">로그인한 구글 계정 이메일이 허용 목록에 없습니다.</p>
+          )}
+
+          {allowedList.length === 0 ? (
+            <p className="mt-3 text-red-700">
+              <b>ALLOWED_EMAILS 가 비어 있습니다.</b> 이 상태에서는 누구도 로그인할 수 없습니다.
+              Vercel → Settings → Environment Variables 에서 본인 이메일을 추가하세요.
+            </p>
+          ) : (
+            <div className="mt-3 text-slate-700">
+              현재 허용된 이메일 ({allowedList.length}개, 일부 마스킹):
+              <ul className="mt-1 list-disc pl-5 font-mono text-xs text-slate-600">
+                {allowedMasked.map((m, i) => (
+                  <li key={i}>{m}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {isMismatch && (
+            <div className="mt-4 rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900">
+              👉 위 <b>{attempted}</b> 가 허용 목록에 없습니다. Vercel 의 <b>ALLOWED_EMAILS</b> 에{" "}
+              <span className="font-mono">{attempted}</span> 를 추가한 뒤 <b>Redeploy</b> 하세요.
+              (이미 있는 이메일과 쉼표로 구분: <span className="font-mono">a@x.com,{attempted}</span>)
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-card">
         <h2 className="text-sm font-semibold text-slate-500">환경변수 점검 (값은 표시되지 않음)</h2>

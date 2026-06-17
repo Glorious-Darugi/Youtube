@@ -37,7 +37,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account }) {
-      if (!isAllowed(user.email)) return false;
+      if (!isAllowed(user.email)) {
+        // 거부한 이메일을 진단 페이지에 함께 넘겨, 사용자가 어떤 계정으로 시도했는지 즉시 확인 가능.
+        const params = new URLSearchParams({ error: "AccessDenied", email: user.email || "" });
+        return `/auth/error?${params.toString()}`;
+      }
       // 첫 동의 시 받은 refresh token 을 저장 (이후 수익 조회에 사용)
       if (account?.refresh_token && user.email) {
         try {
