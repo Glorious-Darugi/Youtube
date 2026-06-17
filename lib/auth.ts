@@ -1,6 +1,10 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import { cookies } from "next/headers";
 import { ensureTables, sql } from "./db";
+
+/** 거부 시 어떤 이메일이었는지 진단 페이지에 알려주기 위한 쿠키 이름. */
+export const REJECTED_EMAIL_COOKIE = "yt_rejected_email";
 
 // 수익(YouTube Analytics)까지 읽기 위한 권한
 const SCOPES = [
@@ -38,9 +42,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account }) {
       if (!isAllowed(user.email)) {
-        // 거부한 이메일을 진단 페이지에 함께 넘겨, 사용자가 어떤 계정으로 시도했는지 즉시 확인 가능.
-        const params = new URLSearchParams({ error: "AccessDenied", email: user.email || "" });
-        return `/auth/error?${params.toString()}`;
+        // 거부한 이메일을 짧은 수명 쿠키로 진단 페이지에 전달.
+        // (NextAuth v5 가 signIn 콜백에서 반환한 URL 의 추가 쿼리를 잘라먹는 경우가 있어 쿠키가 더 확실)
+        try {
+          const c = await cookies();
+          c.set(REJECTED_EMAIL_COOKIE, user.email || "", {
+            maxAge: 120, // 2분이면 충분
+            path: "/",
+            sameSite: "lax",
+            httpOnly: false,
+          });
+        } catch {
+          /* 쿠키 설정이 막혀도 거부 자체는 정상 진행 */
+        }
+        return false;
       }
       // 첫 동의 시 받은 refresh token 을 저장 (이후 수익 조회에 사용)
       if (account?.refresh_token && user.email) {
